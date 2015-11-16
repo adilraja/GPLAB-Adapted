@@ -1,0 +1,89 @@
+function [fitness,resultind,bCoeff,aCoeff]=computeError(ind,params,data,terminals,varsvals)
+%REGFITNESS    Measures the fitness of a GPLAB individual.
+%   REGFITNESS(INDIVIDUAL,PARAMS,DATA,TERMINALS,VARSVALS) returns
+%   the fitness of INDIVIDUAL, measured as the sum of differences
+%   between the obtained and expected results, on DATA dataset.
+%
+%   [FITNESS,RESULT]=REGFITNESS(INDIVIDUAL,PARAMS,DATA,TERMINALS,VARSVALS)
+%   also returns the result obtained in each fitness case.
+%
+%   Input arguments:
+%      INDIVIDUAL - the individual whose fitness is to measure (string)
+%      PARAMS - the current running parameters (struct)
+%      DATA - the dataset on which to measure the fitness (struct)
+%      TERMINALS - the variables to set with the input dataset (cell array)
+%      VARSVALS - the string of the variables of the fitness cases (string)
+%   Output arguments:
+%      FITNESS - the fitness of INDIVIDUAL (double)
+%      RESULT - the result obtained in each fitness case (array)
+%
+%   See also CALCFITNESS, ANTFITNESS
+%
+%   Copyright (C) 2003-2004 Sara Silva (sara@dei.uc.pt)
+%   This file is part of the GPLAB Toolbox
+
+%for t=1:params.numvars
+	% for all variables (which are first in input list), ie, X1,X2,X3,...
+ %  var=terminals{t,1};
+  % val=varsvals{t}; % varsvals was previously prepared to be assigned (in genpop)
+  % eval([var '=' val ';']); 
+   % (this eval does assignments like X1=2,X2=4.5,...)
+   %end
+
+% evaluate the individual and measure difference between obtained and expected results:
+%res=eval(ind);
+res=evalin('base',ind.str);%this can be used alternative to the above expression and the for loop; when speedy stuff is required :)Adil made it ind.str
+% if the individual is just a terminal, res is just a scalar, but we want a vector:
+
+if length(res)<length(data.result)
+   res=res*ones(length(data.result),1);
+%else%assuming that it is equal to 1328
+%res2=reshape(res,4,840/4);
+%res=mean(res2);%Adil this and the above line are added deliberately for the sake of P.563 dimensionality test and should removed afterwards.
+%res=res';
+end
+%adil's code goes here
+aCoeff=0;
+bCoeff=1;
+[aCoeff, bCoeff] = linearScaling(res, data.result);
+      res = aCoeff+(bCoeff*res);
+      diff = data.result-res;
+ %     assignin('base','diff',diff);
+ %     diff=evalin('base','rdivide(diff,Devs)');
+      meandif=mean(power(diff,2));
+
+%sumdif=sum(abs(res-data.result));
+resultind=res;
+
+% raw fitness:
+fitness=sqrt(meandif); %lower fitness means better individual
+
+% now limit fitness precision, to eliminate rounding error problem:
+fitness=fixdec(fitness,params.precision);
+if(isnan(fitness)||isinf(fitness))
+    fitness=50000;%Give a very large value to fitness so that the individual is removed:Adil
+end
+end
+function [acoeff, bcoeff]=linearScaling(evolved,target)
+i=0;
+if length(evolved) ~= length(target)
+     fprintf(1,'No of Target Values is not the same as Evolved Values %d, %d', length(target),length(evolved));
+     fprintf(1,'Exiting .... ');
+     exit(0);
+ end
+ 
+ meanTarget = mean(target);
+ meanEvolved = mean(evolved);
+ 
+ b = 1; a=0; numerator=0;denominator=0;
+ 
+      factor = evolved-meanEvolved;
+     numerator= sum((target-meanTarget).*factor);
+     denominator =sum(power(factor,2));
+     bcoeff=1;
+ if denominator~=0     bcoeff=numerator/denominator;
+   elseif  (meanEvolved == 0)  bcoeff = 1;
+   else bcoeff = meanTarget / meanEvolved;
+ end
+ acoeff=meanTarget - bcoeff*meanEvolved; 
+end

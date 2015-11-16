@@ -1,0 +1,13 @@
+%/*********************
+%* FUNCTION: StandardIRSFilter
+%*
+%* DESCRIPTION: Filter signal using IRS like Curve
+%* Corresponds to the 
+%*
+%***********************/
+
+
+function pfFilterdSignal=StandardIRSFilter(pfSignal)
+IRSLikeCurvedB  =[0 -100; 50 -27; 100 -27.5;125 -18.8;160 -10.8;200 -2.7;250 2.7;300 6.4;315 7.2;400 9.9;500 11.3;600 11.8;630 11.9;800 12.3;1000 12.6; 1250 12.5;1600 13;2000 13.1;2200 13.1;2700 12.5;2850 12.6;3200 -8.1;3700 -43.6;4700 -66.9;6000 -79.5;8000 -102];
+SAMPLE_FREQUENCY=8000;
+pfFilterdSignal=FftFilter( pfSignal, 26 ,SAMPLE_FREQUENCY, IRSLikeCurvedB);

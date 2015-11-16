@@ -1,0 +1,182 @@
+% /*
+%   --------------------------------------------------------------------------
+%  
+%         long fl2sh (long  n, float *x, short *iy,
+%         ~~~~~~~~~~  double half_lsb, unsigned mask);
+%  
+%         Description:
+%         ~~~~~~~~~~~~
+%  
+%         Common quantisation routine. The conversion routine expect the
+%         floating point data to be in the range between -1 .. +1,
+%         values outside this range are limited to -1 or +32767.0.
+%         Quantization is done by taking into account only the
+%         most significant bits. So the quantized (or converted) data are
+%         located left justified within the 16-bit word, and the results
+%         are in the range:
+%                   -32768,( 1),+32767, if quantized to 16 bit
+%                   -32768,( 2),+32766, if quantized to 15 bit
+%                   -32768,( 4),+32763, if quantized to 14 bit
+%                   -32768,( 8),+32760, if quantized to 13 bit
+%                   -32768,(16),+32752, if quantized to 12 bit
+%  
+%         In some cases one needs truncated data. For example, at the
+%         input of A-Law encoding, truncation to 12 bit is neccessary, not
+%         rounding. On the other hand within recursive filters rounding is
+%         essential. So, for both cases functions have been designed.
+%  
+%         Concerning the location of the fixed-point data within one 16
+%         bit word, it's most practical to have the decimal point
+%         immediateley after the sign bit (between bit 15 and 14, if the
+%         bits are ordered from 0 ... 15). Since this is well defined, a
+%         software, which processes the quantized data  needs no knowledge
+%         about the resolution of the data. It's not important,  whether
+%         tha data come out from A- or u-Law decoding routines or from
+%         12-bit (13,14,16-bit) A/D converters.
+%  
+%  
+%         Parameters:
+%         ~~~~~~~~~~~
+%         n .......... is the number of samples in x[];
+%         x .......... is input float array's pointer;
+%         iy ......... is output short array's pointer;
+%         half_lsb ... is the float representation of 0.5 lsb for the
+%                      desired resolution (quantization);
+%         mask ....... unsigned masking of the lower (right) bits.
+%  
+%         Returns value:
+%         ~~~~~~~~~~~~~~
+%         Returns the number of overflows that happened.
+%  
+%         Prototype:  in ugst-utl.h
+%         ~~~~~~~~~~
+%  
+%         Original author:
+%         ~~~~~~~~~~~~~~~~
+%               Rudolf Hofmann
+%               Advanced Development Digital Signal Processing
+%               PHILIPS KOMMUNIKATIONS INDUSTRIE AG
+%               Kommunikationssysteme
+%               Thurn-und-Taxis-Strasse 14
+%               D-8500 Nuernberg 10 (Germany)
+%  
+%               Phone : +49 911 526-2603
+%               FAX   : +49 911 526-3385
+%               EMail : hf@pkinbg.uucp
+%  
+%         History:
+%         ~~~~~~~~
+%         10.Dec.91 v1.0 Release of 1st version with callable routines for
+%                        conversion from float to short. <hf@pkinbg.uucp>
+%         25.Feb.92 v1.1 Change of specific functions to macros (#defines)
+%                        <tdsimao@venus.cpqd.ansp.br>
+%         28.Feb.92 v1.2 Change of call from short to unsigned for parameter
+%                        mask, needed in Unix <tdsimao@venus.cpqd.ansp.br>
+%         18.May.92 v1.3 Change to make it operate with input data in the
+%                        normalized range (-1.0 .. +1.0), instead of floats
+%                        in the integer range (-32768.0 .. 32767.0).
+%         27.Nov.92 v1.4 fl2sh() corrected for negative values 
+%                        <hf@pkinbg.uucp>
+%  
+%   --------------------------------------------------------------------------
+% */
+ 
+function fl2sh(n, x, iy, half_lsb, mask)
+  long            n;
+  float          *x;
+  short          *iy;
+  double          half_lsb;
+  short           mask;
+{
+  register long   iOvrFlw, k;
+  register double y;
+
+  /* Reset overflow counter */
+  iOvrFlw = int32(0);
+
+  %/* Loop over all input samples: assume result left justified in array */
+
+%  /* ------------------------------------------------------------------------ */
+%  /* Perform 2's complement truncation if "no rounding" is selected           */
+%  /* ------------------------------------------------------------------------ */
+  if (half_lsb == 0.0)
+  {
+      y=x*32768;
+      i=find(y>32767);
+      %Amplitude clip
+      y(i)=32767;%Limit it to positive maximum
+      iOvrFlw=iOvrFlw+length(i);
+      i=find(y<-32768)
+      y(i)=-32768;
+      iOvrFlw=iOvrFlw+length(i);
+      
+    for (k = 0; k < n; k++)
+    {
+ %     /* Convert input data from normalized to 16-bit range (still float) */
+      y = x[k] * 32768;
+
+      /* Amplitude clip */
+      if (y > 32767.0)		/* limitation to positive maximum */
+      {
+	y = 32767.0;
+	iOvrFlw += 1;
+      }
+      else if (y < -32768.0)	/* limitation to negative maximum */
+      {
+	y = -32768.0;
+	iOvrFlw += 1;
+      }
+
+      iy[k] = (short) (y);
+      iy[k] &= mask;
+    }
+  }
+
+  /* ---------------------------------------------------------------------- */
+  /* Perform Magnitude Rounding                                             */
+  /* ---------------------------------------------------------------------- */
+  else
+  {
+    for (k = 0; k < n; k++)
+    {
+      /* Convert input data from normalized to 16-bit range (still float) */
+      y = x[k] * 32768;
+      if (y >= 0.0)
+	y = y + half_lsb;
+      else
+	y = y - half_lsb;
+
+      /* Amplitude clip */
+      if (y > 32767.0)
+      {
+	/* limitation to positive maximum */
+	y = 32767.0;
+	iOvrFlw += 1;
+      }
+      else if (y < -32768.0)
+      {
+	/* limitation to negative maximum */
+	y = -32768.0;
+	iOvrFlw += 1;
+      }
+
+      if (y >= 0.0)
+      {
+	/* conversion to short (16 bit) */
+	iy[k] = (short) (y);
+	iy[k] &= mask;
+      }
+      else
+      {
+	/* if (y < 0.0) */
+	iy[k] = (short) (-y);	/* iy will be 0x8000 even if y = -32768.0   */
+	iy[k] &= mask;
+	iy[k] = -iy[k];
+      }
+    }
+  }
+
+  /* Return number of overflows */
+  return iOvrFlw;
+}                   /* ......... end of fl2sh() ......... */
+ 

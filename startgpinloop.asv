@@ -1,0 +1,17 @@
+
+function [j,myvars, mybs]=startgpinloop()
+
+myvars=[];
+mybs=[];
+for i=1:50
+fid=fopen('counts.txt','w');
+fprintf(fid,'%d',i);
+fclose(fid);
+params=resetparams;
+[vars, b]=gplab(50,200,params);
+myvars=[myvars vars];
+mybs=[mybs b];
+
+end
+j=0;
+save Exp_EUGP8 myvars mybs;

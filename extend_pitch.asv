@@ -1,0 +1,119 @@
+%/*********************
+%*
+%*	FUNCTION: extend_pitch
+%*
+%*	DESCRIPTION:
+%*		This function refine the boundaries of the pitched sections
+%*		according to a pitch length and energy test.
+%*
+%***********************/
+function extend_pitch(speech, speech_length, tmp_pitch, tmp_pitch_length, length_threshold, pitch_allocated)
+{
+	INT32 stable_length = 0;	
+	INT32 new_insertions_length = 0; 
+	INT32 comparison_result = 0 ; 
+	INT32 pitch_same = 1 ;	
+	INT32 tmp_loop = 0 ;
+	INT32 stable_allocated = 0 ;
+	INT32 insertions_allocated = 0 ;
+    PITCH_ENERGY_THRESHOLD=500;
+    PITCH_RMS_THRESHOLD=3;
+    PITCH_CROSS_POWER_THRESHOLD=0.1;
+
+	insertions_allocated = (speech_length / 4) ;
+	
+	stable_allocated = tmp_pitch_length ;
+	tmp_loop = 0 ;
+
+	while(1)
+        pitch_length = tmp_pitch_length ;
+        pitch=tmp_pitch;
+		[tmp_pitch,tmp_pitch_length]=remove_singles(tmp_pitch, tmp_pitch_length) ;
+		first_length = 0 ;
+		[first, first_length]=find_first_only(tmp_pitch, *tmp_pitch_length) ;
+		first_pitch_length = *tmp_pitch_length ;
+    
+        first_pitch=tmp_pitch(1:tmp_pitch_length);
+		
+		for(left_loop = 1:first_length) 
+			first_mark = first_pitch(first(left_loop)) ;
+			length = first_pitch((first(left_loop) + 1)) - first_mark ;
+
+			if(first(left_loop) == 0) 
+                previous = -1 ;
+            else
+                previous = first_pitch((first(left_loop) - 1)) ;
+            end
+
+			candidate = first_mark - length ;
+
+			if( (candidate < 96) || (candidate > speech_length-96))
+				if(bin_search(first_mark, new_insertions, new_insertions_length) ~= -1)
+					bin_insert(first_mark, stable_test, stable_length, stable_allocated) ;
+				else 
+					bin_remove(first_mark, tmp_pitch, tmp_pitch_length) ;
+                end
+            elseif((bin_search(first_mark, stable_test, stable_length)) == -1)
+				candidate=split_arrays(candidate, length, speech, previous_cycle, current_cycle) ;
+				rms_previous = rootmeansquare(previous_cycle(1:length)) ;
+				rms_ratio = (rootmeansquare(current_cycle(1:length))+0.01)/(rms_previous + 0.01));
+				cross_power_result = cross_power_ratio(previous_cycle, length, current_cycle, length) ;
+				
+				if( (rms_previous > PITCH_ENERGY_THRESHOLD) && (rms_ratio < PITCH_RMS_THRESHOLD) && 
+					(cross_power_result > PITCH_CROSS_POWER_THRESHOLD) && (length > length_threshold) )
+					comparison_result = 1 ;
+                else
+                    comparison_result = 0 ;
+                end
+
+				beginning_result = beginning_test(candidate, previous) ;
+
+				if(beginning_result)
+					if(~comparison_result)
+						if(bin_search(first_mark, new_insertions, new_insertions_length) ~= -1)
+							bin_insert(first_mark, stable_test, stable_length, stable_allocated) ;
+						else 
+							bin_remove(first_mark, tmp_pitch, tmp_pitch_length) ;
+                        end
+                    end
+                else
+					if(comparison_result)
+						bin_insert(candidate, new_insertions, &new_insertions_length, insertions_allocated) ;
+						bin_insert(candidate, tmp_pitch, tmp_pitch_length, pitch_allocated) ;
+                    else
+						if(bin_search(first_mark, new_insertions, new_insertions_length) ~= -1)
+							bin_insert(first_mark, stable_test, stable_length, stable_allocated) ;
+						else 
+							bin_remove(first_mark, tmp_pitch, tmp_pitch_length) ;
+                        end
+                    end
+                end
+            end
+        end
+                  
+
+		pitch_same = 1 ;
+
+		if(tmp_pitch_length ~= pitch_length) 
+            pitch_same = 0 ;
+            break;
+        else
+			test_count = 0 ;
+			while((pitch_same == 1) && (test_count < pitch_length))
+				if (tmp_pitch(test_count) ~= pitch(test_count)) 
+                    pitch_same = 0 ;
+                    test_count =test_count+ 1 ;
+                end
+            end
+        end
+		tmp_loop =tmp_loop+ 1 ;
+    end
+	
+	
+
+	free(pitch) ;
+	free(first) ;
+	free(first_pitch) ;
+	free(new_insertions);
+	free(stable_test);
+}

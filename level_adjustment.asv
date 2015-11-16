@@ -1,0 +1,69 @@
+% /*
+%    **************************************************************************
+%    ***                                                                    ***
+%    ***        Program for adjusting the level of speech to user defined value***
+%    ***                                                                    ***
+%    **************************************************************************
+% */
+function speech=level_adjustment(speech, sf,desired_level)
+  N=256;
+  N1=1;
+  N2=0; i;
+  l;
+  NdB=-26; 
+
+  quiet=0;
+  use_active_level = 1;
+  long_summary = 1;
+  NrSat = 0;
+  start_byte;
+  bitno = 16;
+  sf = 16000;
+  factor;
+  mask=['FFFF' 'FFFE' 'FFFB' 'FFF8' 'FFF0'];
+  mask=hex2int(mask);
+  /* ......... SOME INITIALIZATIONS ......... */
+     
+    struct stat     st;
+
+    /* ... find the input file size ... */
+    sp_size=length(speech);
+    N2 = ceil(sp_size/N);%no of blocks/ frames
+ %   speech=[speech zeros(N2*N,1)];
+  Overflow = power(2, bitno-1);%checks to see wrap around value
+
+  state=init_speech_voltmeter(sf);
+
+  %/* ... MEASUREMENT OF ACTIVE SPEECH LEVEL ACCORDING P.56 ... */
+
+ %  Process selected blocks 
+  for (i =0:N2)%i.e. for all frames
+            %/* ... Get the active level */
+    if(length(speech(i+1:length(speech)))<N)
+        N=length(speech(i+1:length(speech)));
+    end
+        [ActiveLeveldB, state]=speech_voltmeter(speech(i+1:i+N),l);
+  end
+  
+      
+  /* ... COMPUTE EQUALIZATION FACTOR ... */
+
+  %/* Computes the equalization factor to be used in the output file */
+  DesiredSpeechLeveldB = NdB;
+  if (use_active_level)
+    factor = power(10.0, (DesiredSpeechLeveldB-ActiveLeveldB) / 20.0);
+  else
+    factor = power(10.0, (DesiredSpeechLeveldB-state.rmsdB) / 20.0);
+  end
+
+   
+  %  /* Get data of interest, equalize and de-normalize */
+  
+    %   /* equalizes vector */     
+     speech=speech*factor;%scales the frame
+    %  /* Convert from float to short with hard clip and truncation */
+      [speech,NrSat] = fl2sh((long) l, Buf, buffer, (double 0.0, mask(16-bitno+1));
+      %/* write equalized, de-normalized and hard-clipped samples to file */
+  
+      
+      

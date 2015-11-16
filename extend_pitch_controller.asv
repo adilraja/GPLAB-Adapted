@@ -1,0 +1,29 @@
+%/*********************
+%*
+%*	FUNCTION: extend_pitch_controller
+%*
+%*	DESCRIPTION:
+%*		This function is a bundle of the boundaries reestimation
+%*		and the pitch marks cleaning.
+%*
+%***********************/
+function extend_pitch_controller(speech, speech_length, pitch, pitch_length, length_threshold, pitch_allocated)
+	for(direction_loop = 1:2)
+	
+		extend_pitch(speech, speech_length, pitch, pitch_length, length_threshold, pitch_allocated);
+
+		i=1:1:speech_length;
+        i=sort(i,'descend');
+        speech=speech(i);
+        reverse_array(speech, speech_length, SHORT_TYPE) ;
+
+		for(loop = 0; loop<*pitch_length; loop++)
+		{
+			pitch[loop] = speech_length - pitch[loop] ;
+		}
+		reverse_array(pitch, *pitch_length, LONG_TYPE)  ;
+	}
+
+	remove_singles(pitch, pitch_length) ;
+	remove_doubles(pitch, pitch_length) ; 
+}

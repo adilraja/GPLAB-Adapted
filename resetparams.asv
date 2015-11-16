@@ -1,0 +1,37 @@
+function params=resetparams;
+%RESETPARAMS    Resets the parameter variables for the GPLAB algorithm.
+%   RESETPARAMS sets all the GPLAB algorithm parameter variables with the
+%   default values.
+%
+%   Output arguments:
+%      PARAMS - the set of default parameter variables (struct)
+%
+%   See also SETPARAMS, RESETSTATE
+%
+%   Copyright (C) 2003-2004 Sara Silva (sara@dei.uc.pt)
+%   This file is part of the GPLAB Toolbox
+
+params=setparams([],'defaults');
+params.initialprobstype='fixed';
+%params.calcfitness='gabasedfitnessfunction';
+params.calcfitness='computeError';
+%params.calcfitness2='gabasedfitnessfunction2';
+params.calcfitness2='rsquareFitness2';
+params.slope=0;
+params.intercept=0;
+params.lowerisbetter=0;
+%params.datafilex='p563-reduced-input-params-cond-n-exp-wise.txt';
+%params.datafiley='Subj-MOS-1328-cond-wise-sorted.txt';
+params.datafilex='Ie-training-data-X.txt';
+params.datafiley='Ie-training-data-Y.txt';
+params.usetestdata=1;
+params.testdatafilex='Ie-testing-data-X.txt';
+params.testdatafiley='Ie-testing-data-Y.txt';
+params.graphics=[];
+params.survival='halfelitism';
+params=setterminals(params,'rand','10','9','8','7','5','3','2');
+defaults.functions='{''plus'' 2; ''minus'' 2; ''times'' 2; ''sin'' 1; ''cos'' 1; ''adillog'' 1; ''adilpower'' 2; ''adildivide'' 2; ''adilsqrt'' 1,; ''adillog2'' 1,; ''adillog10'' 1,; ''myif'' 3}';
+params.tournamentsize=2;
+params.iniclevel=6;
+params.realmaxlevel=17;
+params.sampling='lexictour_adil';
